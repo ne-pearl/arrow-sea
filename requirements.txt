@@ -1,0 +1,6 @@
+cvxpy
+jupytext
+matplotlib
+networkx
+pandas
+pygraphviz==1.14
