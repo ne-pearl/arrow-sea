@@ -1,4 +1,3 @@
-import enum
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colors as mc
@@ -6,28 +5,6 @@ import matplotlib.transforms as mpt
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
-
-plt.rcParams["font.family"] = "sans-serif"
-
-
-class Util(enum.Enum):
-    """Capacity utilization."""
-
-    UNUSED = 0
-    USED = 1
-    SATURATED = 2
-
-
-def util(fraction: float) -> Util:
-    """Utilization category."""
-    assert 0.0 <= fraction <= 1.0
-    epsilon = 1 / 100
-    lower, upper = epsilon, 1.0 - epsilon
-    return (
-        Util.UNUSED
-        if fraction < lower
-        else Util.SATURATED if fraction > upper else Util.USED
-    )
 
 
 def initialize(
@@ -86,7 +63,7 @@ def initialize(
         graph.add_edge(
             offer["id"],
             offer["bus_id"],
-            label=f"{offer['dispatch']*100:.0f}MW",
+            label=f"{offer['dispatch']:.0f}MW",
             color=edge_cmap(utilization),
             utilization=utilization,
             flow=offer["dispatch"],
@@ -101,19 +78,20 @@ def plot(
     xscale: float = 1.0,
     yscale: float = 1.0,
     kscale: float = 1.0,
+    epsilon=1 / 100,
 ):
     edge_labels = nx.get_edge_attributes(graph, "label")
     edge_utilization = nx.get_edge_attributes(graph, "utilization")
+
+    lower, upper = epsilon, 1.0 - epsilon
     edge_labels_unused = {
-        k: v for k, v in edge_labels.items() if util(edge_utilization[k]) is Util.UNUSED
+        k: v for k, v in edge_labels.items() if edge_utilization[k] < lower
     }
     edge_labels_used = {
-        k: v for k, v in edge_labels.items() if util(edge_utilization[k]) is Util.USED
+        k: v for k, v in edge_labels.items() if lower <= edge_utilization[k] <= upper
     }
     edge_labels_saturated = {
-        k: v
-        for k, v in edge_labels.items()
-        if util(edge_utilization[k]) is Util.SATURATED
+        k: v for k, v in edge_labels.items() if upper < edge_utilization[k]
     }
 
     pos_unscaled = nx.get_node_attributes(graph, "pos")
