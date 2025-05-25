@@ -1,4 +1,6 @@
 cvxpy
+ecos
+IPython
 jupytext
 matplotlib
 networkx

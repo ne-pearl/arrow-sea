@@ -1,14 +1,14 @@
 from pandas import DataFrame
 
 base_power = 100  # [MVA]
-reference_bus = "A"
+reference_bus = "D"
 
 buses = DataFrame(
     [
         ("A", 0.0, 0.0, 0.0),
-        ("B", 300.0, 1.0, 0.0),
-        ("C", 300.0, 2.0, 0.0),
-        ("D", 400.0, 2.0, 1.0),
+        ("B", 300.0, 2.0, 0.0),
+        ("C", 300.0, 4.0, 0.0),
+        ("D", 400.0, 4.0, 2.0),
         ("E", 0.0, 0.0, 2.0),
     ],
     columns=["id", "load", "x", "y"],
