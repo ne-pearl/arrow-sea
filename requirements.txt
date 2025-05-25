@@ -1,5 +1,6 @@
 cvxpy[glpk]
 ecos
+highspy
 IPython
 jupytext
 matplotlib
