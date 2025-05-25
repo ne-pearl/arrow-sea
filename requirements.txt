@@ -1,4 +1,4 @@
-cvxpy
+cvxpy[glpk]
 ecos
 IPython
 jupytext

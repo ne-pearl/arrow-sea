@@ -2,7 +2,6 @@
 import cvxpy as cp
 import numpy as np
 
-
 import incidence
 from pjm5bus import buses, generators, lines, offers, reference_bus, base_power
 
