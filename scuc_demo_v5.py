@@ -105,7 +105,7 @@ objective = cp.Minimize(
 print(f"# Constraints: {len(constraints)}")
 problem = cp.Problem(objective, constraints)
 
-problem.solve(solver=cp.CBC, verbose=True)
+problem.solve(solver=cp.HIGHS, verbose=True)
 print(f"       Status: {problem.status}")
 print(f" Optimal cost: ${problem.value:,.2f}")
 

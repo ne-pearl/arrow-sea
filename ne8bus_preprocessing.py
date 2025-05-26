@@ -99,14 +99,31 @@ bus_names = loads.columns.drop("hour")
 buses = pd.DataFrame(pd.Series(bus_names, name="id"))
 buses.to_csv(output_directory / "buses.csv", index=False)
 
-# offers = generators[["id", "capacity", "dispatch_cost_coef_a"]].rename(
-#     columns={
-#         "id": "generator_id",
-#         "capacity": "quantity",
-#         "dispatch_cost_coef_a": "price",
-#     }
-# )
-# offers.to_csv(output_directory / "offers.csv", index=False)
+offers = generators[["id", "capacity", "dispatch_cost_coef_a"]].rename(
+    columns={
+        "id": "generator_id",
+        "capacity": "quantity",
+        "dispatch_cost_coef_a": "price",
+    }
+)
+
+# Split each generator's capacity into two equal tranches
+offers["quantity"] *= 0.5
+# First (cheaper) offer
+offers_low = offers.copy()
+offers_low["price"] *= 0.9  # 10% cheaper
+offers_low["tranche"] = 1
+# Second (more expensive) offer
+offers_high = offers.copy()
+offers_high["price"] *= 1.1  # 10% more expensive
+offers_high["tranche"] = 2
+# Combine and sort
+offers = (
+    pd.concat([offers_low, offers_high], axis=0)
+    .sort_values(by=["generator_id", "tranche"])
+    .reset_index(drop=True)
+)
+offers.to_csv(output_directory / "offers.csv", index=False)
 
 bus_ids = set(buses["id"])
 adjacencies = set(lines["from_bus_id"]) | set(lines["to_bus_id"])

@@ -49,7 +49,7 @@ def generator_bus(
     generators: DataFrame,
     buses: DataFrame,
 ) -> NDArray[np.bool_]:
-    """Generatpr-bus incidence matrix."""
+    """Generator-bus incidence matrix."""
 
     def incidence(g: int, b: int) -> bool:
         return buses.at[b, "id"] == generators.at[g, "bus_id"]
@@ -60,6 +60,21 @@ def generator_bus(
     )
     assert np.all(result.sum(axis=1) == 1), "one bus per offer"
     return result
+
+
+def generator_offer(
+    generators: DataFrame,
+    offers: DataFrame,
+) -> NDArray[np.bool_]:
+    """Generator-offer incidence matrix."""
+
+    def incidence(g: int, o: int) -> bool:
+        return generators.at[g, "id"] == offers.at[o, "generator_id"]
+
+    return np.array(
+        [[incidence(g, o) for o in offers.index] for g in generators.index],
+        dtype=np.bool_,
+    )
 
 
 def reference_bus(buses: DataFrame, id_: str) -> int:
