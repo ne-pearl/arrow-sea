@@ -41,21 +41,6 @@ x_on = cp.Variable((len(generators), len(series)), name="x_on", boolean=True)
 x_su = cp.Variable((len(generators), len(series)), name="x_su", boolean=True)
 x_sd = cp.Variable((len(generators), len(series)), name="x_sd", boolean=True)
 
-
-# def lagged(to, length):
-#     return list(range(max(0, to - length + 1), to + 1))
-
-
-# T = 5
-# for t in range(T):
-#     for n in range(2 * T):
-#         r = lagged(to=t, length=n)
-#         print(f"lag({t}, {n}) => {list(r)}")
-#         assert len(r) == min(n, t + 1)
-#         if 0 < n:
-#             assert r[-1] == t
-#             assert r[0] == max(0, t - n + 1)
-
 constraints = []
 for t in series.index:
     bus_loads = series.loc[t, bus_ids]
@@ -96,15 +81,6 @@ for t in series.index:
             ]
         )
 
-    # for g in generators.index:
-    #     constraints.extend(
-    #         [
-    #             np.sum(x_su[g, lagged(min_downtime[g], t)]) <= x_on[g, t],
-    #             np.sum(x_sd[g, lagged(min_uptime[g], t)]) <= 1 - x_on[g, t],
-    #         ]
-    #     )
-
-
 objective = cp.Minimize(cp.sum([cost @ p[:, t] for t in series.index]))
 problem = cp.Problem(objective, constraints)
 problem.solve(solver=cp.HIGHS)
@@ -121,6 +97,7 @@ pmin = np.min(p.value[indices, :])
 pmax = np.max(p.value[indices, :])
 
 fig, axes = plt.subplots(nrows=ntop, sharex=True, constrained_layout=True)
+
 handles = []
 for i, ax_p in zip(indices, axes):
     ax_x = ax_p.twinx()
@@ -132,8 +109,8 @@ for i, ax_p in zip(indices, axes):
     ax_p.set_xlabel("hour")
     ax_p.set_xticks(range(0, p.value.shape[1] + 1, 24))
     ax_p.set_ylim(pmin, pmax)
-    ax_p.set_ylabel("p [MW]")
-    ax_x.set_ylabel("x [0/1]")
+    ax_p.set_ylabel("generation [MW]")
+    ax_x.set_ylabel("commitment [0/1]")
     ax_x.set_yticks([0, 1])
 
     # Remove x-axis labels for all but the bottom plot
@@ -141,8 +118,8 @@ for i, ax_p in zip(indices, axes):
         ax_p.set_xlabel("")
 
     # Shade peak hours each day
-    peak_start = 8  # [hour]
-    peak_end = 20  # [hour]
+    peak_start = 16  # [hour]
+    peak_end = 21  # [hour]
     h3s = [
         ax_p.axvspan(
             offset + peak_start,
@@ -158,16 +135,15 @@ for i, ax_p in zip(indices, axes):
     if len(handles) == 0:
         handles.extend([h1, h2, h3s[1]])
 
-fig.suptitle("commitment & dispatch")
+fig.suptitle("dispatch & generation")
 axes[-1].set_xlabel("hour")
 
 # Add shared legend below all subplots
 fig.legend(
     handles,
     [h.get_label() for h in handles],
-    loc="upper right",
-    ncol=1,
     frameon=False,
+    loc="center",
+    ncol=1,
 )
-fig.tight_layout()
 plt.show()
