@@ -1,4 +1,5 @@
-cvxpy[glpk]
+cvxpy
+cylp
 ecos
 highspy
 IPython

@@ -57,13 +57,6 @@ for t in series.index:
             # Flow bounds
             f[:, t] >= -line_capacity,
             f[:, t] <= +line_capacity,
-            # Relaxed binary constraints
-            x_on[:, t] >= 0,
-            x_on[:, t] <= 1,
-            x_su[:, t] >= 0,
-            x_su[:, t] <= 1,
-            x_sd[:, t] >= 0,
-            x_sd[:, t] <= 1,
             # Binary logic
             x_su[:, t] + x_sd[:, t] <= 1,
             # Sanity check
@@ -81,12 +74,40 @@ for t in series.index:
             ]
         )
 
-objective = cp.Minimize(cp.sum([dispatch_cost @ p[:, t] for t in series.index]))
-problem = cp.Problem(objective, constraints)
-problem.solve(solver=cp.HIGHS)
+    # Constraints for minimum up/down-time: Implementation #1 - very expensive
+    # for g in generators.index:
+    #     constraints.extend(
+    #         x_on[g, t + τ] >= x_su[g, t]
+    #         for τ in range(min_uptime[g])
+    #         if t + τ < series.hour.size
+    #     )
+    #     constraints.extend(
+    #         x_on[g, t + τ] <= 1 - x_sd[g, t]
+    #         for τ in range(min_downtime[g])
+    #         if t + τ < series.hour.size
+    #     )
 
-print(f"      Status: {problem.status}")
-print(f"Optimal cost: ${problem.value:,.2f}")
+# # Constraints for minimum up/down-time: Implementation #2 - expensive
+# for g in generators.index:
+#     constraints.extend(
+#         cp.sum(x_on[g, t : t + min_uptime[g]]) >= min_uptime[g] * x_su[g, t]
+#         for t in range(series.hour.size - min_uptime[g])
+#     )
+#     constraints.extend(
+#         cp.sum(x_on[g, t : t + min_downtime[g]]) <= min_downtime[g] * (1 - x_sd[g, t])
+#         for t in range(series.hour.size - min_downtime[g])
+#     )
+
+objective = cp.Minimize(
+    cp.sum([dispatch_cost @ p[:, t] + startup_cost @ x_su[:, t] for t in series.index])
+)
+
+print(f"# Constraints: {len(constraints)}")
+problem = cp.Problem(objective, constraints)
+
+problem.solve(solver=cp.CBC, verbose=True)
+print(f"       Status: {problem.status}")
+print(f" Optimal cost: ${problem.value:,.2f}")
 
 from matplotlib import pyplot as plt
 
@@ -146,4 +167,4 @@ fig.legend(
     loc="center",
     ncol=1,
 )
-plt.show()
+plt.show(block=False)
