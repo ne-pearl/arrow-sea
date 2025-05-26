@@ -16,15 +16,14 @@ buses = DataFrame(
 
 generators = DataFrame(
     [
-        ("Alta", "A"),
-        ("ParkCity", "A"),
-        ("Solitude", "C"),
-        ("Sundance", "D"),
-        ("Brighton", "E"),
+        ("Alta", "A", 80.0, 0.0),
+        ("ParkCity", "A", 340.0, 0.0),
+        ("Solitude", "C", 1040.0, 0.0),
+        ("Sundance", "D", 400.0, 0.0),
+        ("Brighton", "E", 1200.0, 0.0),
     ],
-    columns=["id", "bus_id"],
+    columns=["id", "bus_id", "capacity", "fixed_cost"],
 )
-
 
 lines = DataFrame(
     [

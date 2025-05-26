@@ -16,9 +16,9 @@ def line_bus(buses: DataFrame, lines: DataFrame) -> NDArray[np.int8]:
     result = np.array(
         [[incidence(ell, b) for b in buses.index] for ell in lines.index],
         dtype=np.int8,
-    )
-    assert np.all(np.sum(result, axis=1) == 0), "zero row sum"
-    assert np.all(np.sum(np.abs(result), axis=1) == 2), "two nonzeros"
+    ).reshape(lines.index.size, buses.index.size)
+    assert np.all(np.sum(result, axis=1, initial=0) == 0), "zero row sum"
+    assert np.all(np.sum(np.abs(result), axis=1, initial=0) == 2), "two nonzeros"
     return result
 
 
@@ -40,8 +40,8 @@ def offer_bus(
             for o in offers.index
         ],
         dtype=np.bool_,
-    )
-    assert np.all(result.sum(axis=1) == 1), "one bus per offer"
+    ).reshape(offers.index.size, buses.index.size)
+    assert np.all(np.sum(result, axis=1, initial=0) == 1), "one bus per offer"
     return result
 
 
@@ -57,8 +57,8 @@ def generator_bus(
     result = np.array(
         [[incidence(g, b) for b in buses.index] for g in generators.index],
         dtype=np.bool_,
-    )
-    assert np.all(result.sum(axis=1) == 1), "one bus per offer"
+    ).reshape(generators.index.size, buses.index.size)
+    assert np.all(np.sum(result, axis=1, initial=0) == 1), "one bus per offer"
     return result
 
 
@@ -74,7 +74,7 @@ def generator_offer(
     return np.array(
         [[incidence(g, o) for o in offers.index] for g in generators.index],
         dtype=np.bool_,
-    )
+    ).reshape(generators.index.size, offers.index.size)
 
 
 def reference_bus(buses: DataFrame, id_: str) -> int:

@@ -11,7 +11,7 @@ def solve1(
     offers: DataFrame,
     reference_bus: str,
     base_power: float = 100,
-    solver: str = cp.ECOS,
+    solver: str = cp.HIGHS,
 ) -> float:
 
     line_bus = incidence.line_bus(buses=buses, lines=lines)
@@ -20,12 +20,16 @@ def solve1(
     offers[:] = offers.merge(generators, left_on="generator_id", right_on="id")
 
     p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
-    f = cp.Variable(len(lines), name="f")  # line flows [MW]
+    f = cp.Variable(len(lines), name="f") if len(lines) > 0 else None  # line flows [MW]
     θ = cp.Variable(len(buses), name="θ")  # bus angles [rad]
 
     balance_constraints = [
         cp.sum([p[o] * offer_bus[o, b] for o in offers.index])
-        + cp.sum([f[ell] * line_bus[ell, b] for ell in lines.index])
+        + (
+            cp.sum([f[ell] * line_bus[ell, b] for ell in lines.index])
+            if f is not None
+            else 0
+        )
         == buses.at[b, "load"]
         for b in buses.index
     ]
@@ -37,6 +41,15 @@ def solve1(
         for ell in lines.index
     ]
 
+    flow_bounds = (
+        [
+            f >= -lines["capacity"],
+            f <= lines["capacity"],
+        ]
+        if f is not None
+        else []
+    )
+
     objective = cp.Minimize(
         cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
     )
@@ -46,17 +59,18 @@ def solve1(
         [
             *balance_constraints,
             *flow_constraints,
+            *flow_bounds,
             θ[reference_bus_index] == 0,
-            f >= -lines["capacity"],
-            f <= lines["capacity"],
             p >= 0,
             p <= offers["quantity"],
         ],
     )
     problem.solve(solver=solver)
+    assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
 
     offers["dispatch"] = p.value
-    lines["flow"] = f.value
+    if f is not None:
+        lines["flow"] = f.value
     buses["angle"] = θ.value
     buses["price"] = [-c.dual_value for c in balance_constraints]
 
@@ -69,7 +83,7 @@ def solve2(
     lines: DataFrame,
     offers: DataFrame,
     reference_bus: str,
-    solver: str = cp.ECOS,
+    solver: str = cp.HIGHS,
 ):
     line_bus = incidence.line_bus(buses=buses, lines=lines)
     offer_bus = incidence.offer_bus(offers=offers, buses=buses, generators=generators)
@@ -111,6 +125,7 @@ def solve2(
     )
 
     problem.solve(solver=solver)
+    assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
 
     mu_lower = -flow_lower_bounds.dual_value
     mu_upper = -flow_upper_bounds.dual_value
@@ -144,3 +159,78 @@ def postprocessing(
     offers["bus_id"] = offers["generator_id"].map(generators.set_index("id")["bus_id"])
     offers["tranche"] = offers.groupby("generator_id").cumcount() + 1
     offers["id"] = offers["generator_id"] + "/" + offers["tranche"].astype(str)
+
+
+def solve_fixed_costs(
+    buses: DataFrame,
+    generators: DataFrame,
+    lines: DataFrame,
+    offers: DataFrame,
+    reference_bus: str,
+    base_power: float = 100,
+    solver: str = cp.HIGHS,
+) -> float:
+    """Solve the SCUC problem with fixed costs."""
+
+    line_bus = incidence.line_bus(buses=buses, lines=lines)
+    offer_bus = incidence.offer_bus(offers=offers, buses=buses, generators=generators)
+    generator_offer = incidence.generator_offer(generators=generators, offers=offers)
+    reference_bus_index = incidence.reference_bus(buses, reference_bus)
+    offers[:] = offers.merge(generators, left_on="generator_id", right_on="id")
+
+    p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
+    f = cp.Variable(len(lines), name="f") if len(lines) > 0 else None  # line flows [MW]
+    θ = cp.Variable(len(buses), name="θ")  # bus angles [rad]
+    x = cp.Variable(len(generators), name="x", boolean=True)  # generator on/off status
+
+    balance_constraints = [
+        cp.sum([p[o] * offer_bus[o, b] for o in offers.index])
+        + cp.sum([f[ell] * line_bus[ell, b] for ell in lines.index])
+        == buses.at[b, "load"]
+        for b in buses.index
+    ]
+    flow_constraints = [
+        f[ell]
+        == cp.sum([line_bus[ell, b] * θ[b] for b in buses.index])
+        * base_power
+        / lines.at[ell, "reactance"]
+        for ell in lines.index
+    ]
+
+    flow_bounds = (
+        [
+            f >= -lines["capacity"],
+            f <= lines["capacity"],
+        ]
+        if f is not None
+        else []
+    )
+
+    objective = cp.Minimize(
+        cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
+        + cp.sum([generators.at[g, "fixed_cost"] * x[g] for g in generators.index])
+    )
+
+    problem = cp.Problem(
+        objective,
+        [
+            *balance_constraints,
+            *flow_constraints,
+            *flow_bounds,
+            θ[reference_bus_index] == 0,
+            p >= 0,
+            p <= offers["quantity"],
+            generator_offer @ p <= cp.multiply(x, generators["capacity"]),
+        ],
+    )
+    problem.solve(solver=solver)
+    assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
+
+    offers["dispatch"] = p.value
+    if f is not None:
+        lines["flow"] = f.value
+    buses["angle"] = θ.value
+    generators["committed"] = x.value.astype(bool)
+    # buses["price"] = [-c.dual_value for c in balance_constraints]
+
+    return problem.value
