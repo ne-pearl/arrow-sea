@@ -1,6 +1,11 @@
 generator_id,quantity,price
-Alta,40.,14.
-ParkCity,170.,15.
-Solitude,520.,30.
-Sundance,200.,40.
-Brighton,600.,10.
+Alta,40.0,14.0
+ParkCity,170.0,15.0
+Solitude,520.0,30.0
+Sundance,200.0,40.0
+Brighton,600.0,10.0
+Alta,40.0,42.0
+ParkCity,170.0,44.0
+Solitude,520.0,46.0
+Sundance,200.0,48.0
+Brighton,600.0,50.0

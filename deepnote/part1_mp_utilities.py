@@ -1,0 +1,155 @@
+import cvxpy as cp
+from matplotlib import pyplot as plt
+import numpy as np
+import pandas as pd
+import sea2025
+
+
+def clear_offer_stack(
+    generators: pd.DataFrame,
+    offers: pd.DataFrame,
+    load: float,
+    solver: str = sea2025.solver,
+) -> float:
+    """Optimal dispatch and marginal price at a single bus."""
+
+    generator_offer = sea2025.incidence.generator_offer(
+        generators=generators, offers=offers
+    )
+
+    # Decision variables
+    p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
+    # x = cp.Variable(len(generators), name="x", boolean=True)  # generator on/off status
+
+    # Objective function
+    objective = cp.Minimize(
+        cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
+        # + cp.sum([generators.at[g, "fixed_cost"] * x[g] for g in generators.index])
+    )
+
+    # Constraints
+    balance_constraint = cp.sum([p[o] for o in offers.index]) == load
+    problem = cp.Problem(
+        objective,
+        [
+            balance_constraint,
+            p >= 0,
+            p <= offers["quantity"],
+            # generator_offer @ p <= cp.multiply(x, generators["capacity"]),
+            generator_offer @ p <= generators["capacity"],
+        ],
+    )
+
+    problem.solve(solver=solver)
+    assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
+
+    # Extract decision variables
+    offers["dispatch"] = p.value
+    # generators["committed"] = x.value.astype(bool)
+    marginal_price = -balance_constraint.dual_value
+
+    return problem.value, marginal_price
+
+
+def clear_offer_stack_fp(
+    generators: pd.DataFrame,
+    offers: pd.DataFrame,
+    load: float,
+    solver: str = sea2025.solver,
+) -> float:
+    """
+    Optimal dispatch and marginal price at a single bus,
+    accounting for fixed costs of generators.
+    """
+    generator_offer = sea2025.incidence.generator_offer(
+        generators=generators, offers=offers
+    )
+
+    # Decision variables
+    p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
+    x = cp.Variable(len(generators), name="x", boolean=True)  # generator on/off status
+
+    # Objective function
+    objective = cp.Minimize(
+        cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
+        + cp.sum([generators.at[g, "fixed_cost"] * x[g] for g in generators.index])
+    )
+
+    # Constraints
+    balance_constraint = cp.sum([p[o] for o in offers.index]) == load
+    problem = cp.Problem(
+        objective,
+        [
+            balance_constraint,
+            p >= 0,
+            p <= offers["quantity"],
+            generator_offer @ p <= cp.multiply(x, generators["capacity"]),
+        ],
+    )
+
+    problem.solve(solver=solver)
+    assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
+
+    # Extract decision variables
+    offers["dispatch"] = p.value
+    generators["commit"] = x.value.astype(bool)
+
+    return problem.value
+
+
+def cumsum_mid(x, start=0):
+    """Interval midpoints from widths."""
+    accumulated = np.concatenate(([start], np.cumsum(x)))
+    return (accumulated[:-1] + accumulated[1:]) * 0.5
+
+
+def plot_offer_stack(offers: pd.DataFrame, load: float, marginal_price: float):
+
+    fig, ax = plt.subplots()
+    ax.set_xlabel("Quantity (MW)")
+    ax.set_ylabel("Price ($/MWh)")
+
+    sorted_offers = offers.sort_values(by="price")
+    select = sorted_offers["dispatch"] > 0
+    dispatched_offers = sorted_offers[select]
+    _, generator_indices = np.unique(sorted_offers["generator_id"], return_inverse=True)
+    colors = plt.get_cmap("tab10")(generator_indices)
+
+    bars = ax.bar(
+        x=cumsum_mid(sorted_offers["quantity"]),
+        height=sorted_offers["price"],
+        width=sorted_offers["quantity"],
+        color=colors,
+        alpha=0.4,
+    )
+    ax.bar(
+        x=cumsum_mid(dispatched_offers["dispatch"]),
+        height=dispatched_offers["price"],
+        width=dispatched_offers["dispatch"],
+        color=colors[select],
+        alpha=0.8,
+    )
+    ax.bar_label(
+        bars,
+        labels=sorted_offers["id"],
+        label_type="center",
+        padding=5,
+    )
+    ax.bar_label(
+        bars,
+        labels=sorted_offers["quantity"].map(lambda x: f"{x}MW"),
+        label_type="center",
+        padding=-5,
+    )
+    ax.bar_label(
+        bars,
+        labels=sorted_offers["price"].map(lambda x: f"${x:.2f}/MWh"),
+        label_type="edge",
+    )
+
+    ax.axvline(x=load, color="black", label="load")
+    ax.axhline(y=marginal_price, color="red", label="marginal price")
+    ax.text(load, 0.1, "load", rotation=90, va="bottom", ha="center", color="black")
+    ax.text(0.0, marginal_price, "marginal price", va="center", ha="left", color="red")
+
+    return fig, ax
