@@ -1,4 +1,3 @@
-import cvxpy as cp
 from matplotlib import pyplot as plt
 import sea2025
 from part2_opf_helpers import clear_market, postprocess, make_graph, plot_graph
@@ -14,7 +13,6 @@ print(f"Optimal dispatch cost: ${result.total_cost:.2f}/h")
 postprocess(result)
 graph = make_graph(result)
 fig, ax = plot_graph(graph, kscale=1.0, xscale=1.0, yscale=1.0)
-plt.savefig("network.svg")
 plt.show(block=False)
 
 # %%
