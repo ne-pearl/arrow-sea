@@ -2,7 +2,7 @@ from copy import deepcopy
 from matplotlib import pyplot as plt
 import numpy as np
 import sea2025
-from part1_mp_utilities import clear_offer_stack, clear_offer_stack_fp, plot_offer_stack
+from part1_mp_helpers import clear_offer_stack, clear_offer_stack_fp, plot_offer_stack
 
 # %%
 data = sea2025.data.read_tuple("data/fc1bus", lines=None)
