@@ -1,5 +1,4 @@
 import dataclasses
-from typing import Optional
 import cvxpy as cp
 from matplotlib import pyplot as plt
 import numpy as np
@@ -15,7 +14,7 @@ class Result:
     offers: pd.DataFrame
     generators: pd.DataFrame
     total_cost: float
-    marginal_price: Optional[float] = None
+    marginal_price: float | None = None
 
 
 def clear_offer_stack(data: DataSet, load: float) -> Result:
