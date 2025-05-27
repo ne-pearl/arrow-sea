@@ -168,7 +168,7 @@ def make_graph(result: Result) -> nx.DiGraph:
         graph.add_edge(
             line["from_bus_id"],
             line["to_bus_id"],
-            label=f"{line['flow']:.0f}MW\n{utilization*100:.0f}%",
+            label=f"{line['flow']:.1f}MW\n{utilization*100:.0f}%",
             color=edge_cmap(utilization),
             utilization=utilization,
             flow=line["flow"],

@@ -8,39 +8,17 @@ def process(data):
     result = clear_market(data)
     postprocess(result)  # add fields
     graph = make_graph(result)
+    print("Cycle edges:")
+    print(sea2025.verification.cycle_edges(graph))
     plot_graph(graph)
-    plt.show()
-    return result, graph
+    plt.show(block=False)
+    return graph
 
 
 # %%
 data = sea2025.data.read("data/triangle1")
-process(data);
+graph = process(data);
 
 # %%
-data.buses.at[2, "load"] += 1.0
-process(data);
-
-# %%
-data = sea2025.data.read("data/triangle2")
-process(data);
-
-# %%
-data.buses.at[2, "load"] += 1.0
-process(data);
-
-# %%
-data = sea2025.data.read("data/triangle3")
-process(data);
-
-# %%
-data.buses.at[2, "load"] += 1.0
-process(data);
-
-# %%
-data = sea2025.data.read("data/triangle4")
-process(data);
-
-# %%
-data.buses.at[2, "load"] += 1.0
+data.buses.at[0, "load"] += 1.0
 process(data);
