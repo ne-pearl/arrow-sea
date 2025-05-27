@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import sea2025
 from part2_opf_helpers import clear_market, postprocess, make_graph, plot_graph
 
+
 def process(data):
     """Solves OPF problem and displays results."""
     result = clear_market(data)
@@ -17,8 +18,20 @@ def process(data):
 
 # %%
 data = sea2025.data.read("data/triangle1")
-graph = process(data);
+
+# %%
+print(data.buses)
+# %%
+print(data.generators)
+# %%
+print(data.lines)
+# %%
+print(data.offers)
+
+
+# %%
+graph = process(data)
 
 # %%
 data.buses.at[0, "load"] += 1.0
-process(data);
+process(data)
