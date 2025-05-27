@@ -118,7 +118,12 @@ for t in series.index:
 #     )
 
 objective = cp.Minimize(
-    cp.sum([offer_price @ p[:, t] + startup_cost @ x_su[:, t] for t in series.index])
+    cp.sum(
+        [
+            offer_price @ p[:, t] + noload_cost @ x_on[:, t] + startup_cost @ x_su[:, t]
+            for t in series.index
+        ]
+    )
 )
 
 print(f"# Constraints: {len(constraints)}")
@@ -152,8 +157,8 @@ for i, ax_p in zip(indices, axes):
     ax_p.set_title(
         (
             f"{generators.at[i, 'id']}: "
-            f"$({prices_min[i]:.2f} - {prices_max[i]:.2f})/MWh, ",
-            f"Bus {generators.at[i, 'bus_id']}",
+            f"$({prices_min[i]:.2f} - {prices_max[i]:.2f})/MWh, "
+            f"Bus {generators.at[i, 'bus_id']}"
         )
     )
     ax_p.set_xlabel("hour")
