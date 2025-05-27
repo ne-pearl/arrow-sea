@@ -1,0 +1,4 @@
+id,bus_id,capacity,fixed_cost
+A,Bus1,200.0,0.0
+B,Bus1,200.0,6000.0
+C,Bus1,200.0,8000.0

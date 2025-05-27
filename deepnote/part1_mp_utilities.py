@@ -12,22 +12,13 @@ def clear_offer_stack(
     solver: str = sea2025.solver,
 ) -> float:
     """Optimal dispatch and marginal price at a single bus."""
-
     generator_offer = sea2025.incidence.generator_offer(
         generators=generators, offers=offers
     )
-
-    # Decision variables
     p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
-    # x = cp.Variable(len(generators), name="x", boolean=True)  # generator on/off status
-
-    # Objective function
     objective = cp.Minimize(
         cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
-        # + cp.sum([generators.at[g, "fixed_cost"] * x[g] for g in generators.index])
     )
-
-    # Constraints
     balance_constraint = cp.sum([p[o] for o in offers.index]) == load
     problem = cp.Problem(
         objective,
@@ -35,19 +26,13 @@ def clear_offer_stack(
             balance_constraint,
             p >= 0,
             p <= offers["quantity"],
-            # generator_offer @ p <= cp.multiply(x, generators["capacity"]),
             generator_offer @ p <= generators["capacity"],
         ],
     )
-
     problem.solve(solver=solver)
     assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
-
-    # Extract decision variables
     offers["dispatch"] = p.value
-    # generators["committed"] = x.value.astype(bool)
     marginal_price = -balance_constraint.dual_value
-
     return problem.value, marginal_price
 
 
@@ -65,18 +50,15 @@ def clear_offer_stack_fp(
         generators=generators, offers=offers
     )
 
-    # Decision variables
     p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
     x = cp.Variable(len(generators), name="x", boolean=True)  # generator on/off status
 
-    # Objective function
     objective = cp.Minimize(
         cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
         + cp.sum([generators.at[g, "fixed_cost"] * x[g] for g in generators.index])
     )
-
-    # Constraints
     balance_constraint = cp.sum([p[o] for o in offers.index]) == load
+
     problem = cp.Problem(
         objective,
         [
@@ -90,7 +72,6 @@ def clear_offer_stack_fp(
     problem.solve(solver=solver)
     assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
 
-    # Extract decision variables
     offers["dispatch"] = p.value
     generators["commit"] = x.value.astype(bool)
 
