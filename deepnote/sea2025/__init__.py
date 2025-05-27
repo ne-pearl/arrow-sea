@@ -1,4 +1,3 @@
-import cvxpy as cp
 import pandas as pd
 
 __all__ = [

@@ -1,0 +1,4 @@
+[tool.ruff]
+lint.ignore = [
+    "E703" # Statement ends with an unnecessary semicolon
+]
