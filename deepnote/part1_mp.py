@@ -1,3 +1,5 @@
+# %%
+from dataclasses import fields
 from matplotlib import pyplot as plt
 import numpy as np
 import sea2025
@@ -6,12 +8,25 @@ from part1_mp_helpers import clear_offer_stack, clear_offer_stack_fp, plot_offer
 # %%
 data = sea2025.data.read("data/fc1bus", lines=None)
 load = data.buses.at[0, "load"]
+load # [MW]
+
+# %%
+fields(data)
+
+# %%
+data.buses
+
+# %%
+data.generators
+
+# %%
+data.offers
 
 # %%
 result = clear_offer_stack(data, load=load)
 plot_offer_stack(result.offers, load=load, marginal_price=result.marginal_price)
 plt.show(block=False)
-
+plt.savefig("images/offer-stack.png")
 
 # %%
 def solve_fp(load: float):
@@ -38,3 +53,4 @@ ax_total.set_ylabel("total cost [$/MWh]")
 ax_total.set_title("cost increments vs load")
 ax_total.grid(True)
 plt.show(block=False)
+plt.savefig("images/non-monotonic-prices.png")
