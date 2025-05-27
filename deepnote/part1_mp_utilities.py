@@ -1,25 +1,43 @@
+import dataclasses
+from typing import Optional
 import cvxpy as cp
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-import sea2025
+from sea2025.data import DataSet
+from sea2025 import incidence
 
 
-def clear_offer_stack(
-    generators: pd.DataFrame,
-    offers: pd.DataFrame,
-    load: float,
-    solver: str = sea2025.solver,
-) -> float:
+@dataclasses.dataclass
+class Result:
+    """Result of the optimal dispatch/pricing problem."""
+
+    offers: pd.DataFrame
+    generators: pd.DataFrame
+    total_cost: float
+    marginal_price: Optional[float] = None
+
+
+def clear_offer_stack(data: DataSet, load: float) -> Result:
     """Optimal dispatch and marginal price at a single bus."""
-    generator_offer = sea2025.incidence.generator_offer(
-        generators=generators, offers=offers
-    )
+
+    # Take references for brevity
+    generators: pd.DataFrame = data.generators
+    offers: pd.DataFrame = data.offers
+
+    # generator-offer incidence matrix
+    generator_offer = incidence.generator_offer(generators=generators, offers=offers)
+
+    # Optimization decision variables and objective function
     p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
     objective = cp.Minimize(
         cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
     )
+
+    # Power balance constraint
     balance_constraint = cp.sum([p[o] for o in offers.index]) == load
+
+    # Add capacity constraints and solve
     problem = cp.Problem(
         objective,
         [
@@ -29,36 +47,45 @@ def clear_offer_stack(
             generator_offer @ p <= generators["capacity"],
         ],
     )
-    problem.solve(solver=solver)
+    problem.solve(solver=cp.HIGHS)
     assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
-    offers["dispatch"] = p.value
-    marginal_price = -balance_constraint.dual_value
-    return problem.value, marginal_price
+
+    # Copy inputs before modifying
+    result = Result(
+        offers=offers.copy(),
+        generators=generators.copy(),
+        total_cost=problem.value,
+        marginal_price=-balance_constraint.dual_value,
+    )
+    result.offers["dispatch"] = p.value
+    return result
 
 
-def clear_offer_stack_fp(
-    generators: pd.DataFrame,
-    offers: pd.DataFrame,
-    load: float,
-    solver: str = sea2025.solver,
-) -> float:
+def clear_offer_stack_fp(data: DataSet, load: float) -> float:
     """
     Optimal dispatch and marginal price at a single bus,
     accounting for fixed costs of generators.
     """
-    generator_offer = sea2025.incidence.generator_offer(
-        generators=generators, offers=offers
-    )
 
+    # Take references for brevity
+    generators: pd.DataFrame = data.generators
+    offers: pd.DataFrame = data.offers
+
+    # generator-offer incidence matrix
+    generator_offer = incidence.generator_offer(generators=generators, offers=offers)
+
+    # Optimization decision variables and objective function
     p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
     x = cp.Variable(len(generators), name="x", boolean=True)  # generator on/off status
-
     objective = cp.Minimize(
         cp.sum([offers.at[o, "price"] * p[o] for o in offers.index])
         + cp.sum([generators.at[g, "fixed_cost"] * x[g] for g in generators.index])
     )
+
+    # Power balance constraint
     balance_constraint = cp.sum([p[o] for o in offers.index]) == load
 
+    # Add capacity constraints and solve
     problem = cp.Problem(
         objective,
         [
@@ -69,13 +96,19 @@ def clear_offer_stack_fp(
         ],
     )
 
-    problem.solve(solver=solver)
+    problem.solve(solver=cp.HIGHS)
     assert problem.status == cp.OPTIMAL, f"Solver failed: {problem.status}"
 
-    offers["dispatch"] = p.value
-    generators["commit"] = x.value.astype(bool)
-
-    return problem.value
+    # Copy inputs before modifying
+    result = Result(
+        offers=offers.copy(),
+        generators=generators.copy(),
+        total_cost=problem.value,
+        marginal_price=None,  # not available in this formulation
+    )
+    result.offers["dispatch"] = p.value
+    result.generators["commit"] = x.value.astype(bool)
+    return result
 
 
 def cumsum_mid(x, start=0):

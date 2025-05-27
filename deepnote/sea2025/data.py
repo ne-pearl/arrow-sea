@@ -31,9 +31,10 @@ DataSet = namedtuple(
 )
 
 
-def read_tuple(*args, **kwargs) -> DataSet:
+def read_tuple(folder: str, reference_bus_index: int = 0, **overrides) -> DataSet:
     """Load CSV files from case directory."""
-    d = read_dict(*args, **kwargs)
+    d = read_dict(folder=folder, reference_bus_index=reference_bus_index)
+    d.update(**overrides)
     return DataSet(
         buses=d["buses"],
         generators=d["generators"],
@@ -44,14 +45,14 @@ def read_tuple(*args, **kwargs) -> DataSet:
     )
 
 
-def read(*args, **kwargs):
-    """Load CSV files from case directory."""
-    t = read_tuple(*args, **kwargs)
-    return (
-        t.buses,
-        t.generators,
-        t.lines,
-        t.offers,
-        t.reference_bus,
-        t.base_power,
-    )
+# def read(folder: str, reference_bus_index: int = 0, **overrides):
+#     """Load CSV files from case directory."""
+#     t = read_tuple(folder, reference_bus_index=reference_bus_index, **overrides)
+#     return (
+#         t.buses,
+#         t.generators,
+#         t.lines,
+#         t.offers,
+#         t.reference_bus,
+#         t.base_power,
+#     )
