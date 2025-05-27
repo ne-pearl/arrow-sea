@@ -86,8 +86,8 @@ for t in series.index:
         constraints.extend(
             [
                 # Ramping constraints
-                p_total_now - p_total_prev <= ramp + p_max * x_su[:, t],
-                p_total_prev - p_total_now <= ramp + p_max * x_sd[:, t],
+                p_total_now - p_total_prev <= ramp + cp.multiply(p_max, x_su[:, t]),
+                p_total_prev - p_total_now <= ramp + cp.multiply(p_max, x_sd[:, t]),
                 # Binary logic
                 x_su[:, t] - x_sd[:, t] == x_on[:, t] - x_on[:, t - 1],
             ]
@@ -129,10 +129,14 @@ print(f"       Status: {problem.status}")
 print(f" Optimal cost: ${problem.value:,.2f}")
 
 p_generator = generator_offer @ p.value
+prices = offers.groupby("generator_id")["price"]
+prices_min = prices.min().values
+prices_max = prices.max().values
 
 ntop = 5
 stdev = np.std(p_generator, axis=1)
 indices = np.sort(np.argpartition(stdev, -ntop)[-ntop:])
+
 pmin = np.min(p_generator[indices, :])
 pmax = np.max(p_generator[indices, :])
 
@@ -145,7 +149,13 @@ for i, ax_p in zip(indices, axes):
     (h1,) = ax_p.plot(p_generator[i, :], color="red", label="p [MW]", alpha=0.5)
     (h2,) = ax_x.plot(x_on.value[i, :], color="gray", label="x [0/1]", alpha=0.5)
 
-    ax_p.set_title(f"Generator {i}")
+    ax_p.set_title(
+        (
+            f"{generators.at[i, 'id']}: "
+            f"$({prices_min[i]:.2f} - {prices_max[i]:.2f})/MWh, ",
+            f"Bus {generators.at[i, 'bus_id']}",
+        )
+    )
     ax_p.set_xlabel("hour")
     ax_p.set_xticks(range(0, p_generator.shape[1] + 1, 24))
     ax_p.set_ylim(pmin, pmax)

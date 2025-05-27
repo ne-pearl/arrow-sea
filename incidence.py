@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
 
 def line_bus(buses: DataFrame, lines: DataFrame) -> NDArray[np.int8]:
@@ -45,19 +45,17 @@ def offer_bus(
     return result
 
 
+def _incidence_matrix(rows: Series, columns: Series) -> NDArray[np.bool_]:
+    """Incidence matrix from series."""
+    return rows.to_numpy().reshape(-1, 1) == columns.to_numpy().reshape(1, -1)
+
+
 def generator_bus(
     generators: DataFrame,
     buses: DataFrame,
 ) -> NDArray[np.bool_]:
     """Generator-bus incidence matrix."""
-
-    def incidence(g: int, b: int) -> bool:
-        return buses.at[b, "id"] == generators.at[g, "bus_id"]
-
-    result = np.array(
-        [[incidence(g, b) for b in buses.index] for g in generators.index],
-        dtype=np.bool_,
-    ).reshape(generators.index.size, buses.index.size)
+    result = _incidence_matrix(generators["bus_id"], buses["id"])
     assert np.all(np.sum(result, axis=1, initial=0) == 1), "one bus per offer"
     return result
 
@@ -67,14 +65,7 @@ def generator_offer(
     offers: DataFrame,
 ) -> NDArray[np.bool_]:
     """Generator-offer incidence matrix."""
-
-    def incidence(g: int, o: int) -> bool:
-        return generators.at[g, "id"] == offers.at[o, "generator_id"]
-
-    return np.array(
-        [[incidence(g, o) for o in offers.index] for g in generators.index],
-        dtype=np.bool_,
-    ).reshape(generators.index.size, offers.index.size)
+    return _incidence_matrix(generators["id"], offers["generator_id"])
 
 
 def reference_bus(buses: DataFrame, id_: str) -> int:
