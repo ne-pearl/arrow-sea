@@ -31,7 +31,7 @@ DataSet = namedtuple(
 )
 
 
-def read_tuple(folder: str, reference_bus_index: int = 0, **overrides) -> DataSet:
+def read(folder: str, reference_bus_index: int = 0, **overrides) -> DataSet:
     """Load CSV files from case directory."""
     d = read_dict(folder=folder, reference_bus_index=reference_bus_index)
     d.update(**overrides)

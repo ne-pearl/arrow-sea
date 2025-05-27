@@ -1,0 +1,12 @@
+cvxpy
+cylp
+ecos
+highspy
+IPython
+jupytext
+matplotlib
+networkx
+pandas
+pygraphviz==1.14
+
+ipykernel

@@ -5,9 +5,10 @@ import sea2025
 from part1_mp_helpers import clear_offer_stack, clear_offer_stack_fp, plot_offer_stack
 
 # %%
-data = sea2025.data.read_tuple("data/fc1bus", lines=None)
+data = sea2025.data.read("data/fc1bus", lines=None)
 load = data.buses.at[0, "load"]
 
+# %%
 result = clear_offer_stack(data, load=load)
 plot_offer_stack(result.offers, load=load, marginal_price=result.marginal_price)
 plt.show(block=False)
