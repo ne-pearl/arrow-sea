@@ -17,6 +17,7 @@ postprocess(result)
 graph = make_graph(result)
 fig, ax = plot_graph(graph, kscale=1.0, xscale=1.0, yscale=1.0)
 plt.show(block=False)
+plt.savefig("images/pjm6bus.png")
 
 # %%
 bus_residuals = sea2025.verification.bus_residuals(graph)
