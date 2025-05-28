@@ -316,6 +316,7 @@ $$
 5. Are we always able to solve the DC-OPF?
 6. Why not solve the AC-OPF instead?
 7. How does power flow relate to bus voltage angles?
+8. Why is it necessary to prescribe the voltage angle at one bus?
 
 ### Network economics
 
