@@ -25,7 +25,7 @@ def clear_offer_stack(data: DataSet, load: float) -> Result:
     offers: pd.DataFrame = data.offers
 
     # generator-offer incidence matrix
-    generator_offer = incidence.generator_offer(generators=generators, offers=offers)
+    # generator_offer = incidence.generator_offer(generators=generators, offers=offers)
 
     # Optimization decision variables and objective function
     p = cp.Variable(len(offers), name="p")  # dispatched/injected power [MW]
@@ -43,7 +43,7 @@ def clear_offer_stack(data: DataSet, load: float) -> Result:
             balance_constraint,
             p >= 0,
             p <= offers["quantity"],
-            generator_offer @ p <= generators["capacity"],
+            # generator_offer @ p <= generators["capacity"],
         ],
     )
     problem.solve(solver=cp.HIGHS)
