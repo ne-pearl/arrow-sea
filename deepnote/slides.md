@@ -17,76 +17,62 @@ style: |
   }
 ---
 
-Grid integration session - ARROW SEA
-====================================
+ARROW SEA 2025: Grid integration session
+========================================
+
+<!-- header: 'Intro & environment' -->
 
 # Overview
 
-1. Jupyter/Python notebook environment
-2. Marginal pricing
-3. Optimal power flow formulation
-4. Congestion examples
-5. Unit commitment
+1. Marginal pricing
+2. Optimal power flow formulation
+3. Congestion scenarios
+4. Unit commitment
 
 ---
-
-# Wind energy and pricing
-
-* Marginal prices determine investment profitability
-* Generation uncertainty affects day-ahead planning
-
----
-
-<!-- header: '1. Jupyter/Python notebook environment' -->
 
 # Jupyter/Python notebook environment 
 
 ## Duplicate the ARROW SEA project in Deepnote
 
-* Click on the three dots `...` in the top-right corner of the screen.
+* Visit https://tinyurl.com/sea2025-deepnote
+* Click on three dots `...` in the top-right corner
 * Select `Duplicate project`
-* You'll be prompted to create an account: Follow the on-screen instructions.
-* Once your account is established, you can edit your own private copy of the project.
+* Log in / Follow the prompts to create an account
+* You can now edit a private copy of the project
 
-<img src="images/deepnote-screenshot.png"/>
+<img src="images/deepnote-screenshot.png" height="40%"/>
 
 ---
 
-<!-- header: '2. Marginal prices' -->
+<!-- header: '1. Marginal prices' -->
 
 # Marginal prices 
 
 ## Objectives
 
+Work through notebook `part1_mp` to:
+
 * Review the graphical method of marginal pricing
 * Reproduce this solution via linear programming
-* ~~Extend the formulation include fixed costs~~
 
 ---
 
-## Graphical solution
+## (1a) Graphical approach to marginal pricing
 
-> 1. Stack quantity-price offers pairs, ordered by price
-> 2. Dispatch quantities to left of load
-> 3. Intercept of load and offer price sets marginal price
+1. Stack quantity-price offers pairs, ordered by price
+2. Dispatch quantities to left of load
+3. Intercept of load and offer price sets marginal price
 
----
+> Does not apply to networks with limited transmission capacity
 
 <img src="images/offer-stack-v1.png" height="70%"/>
 
-* Open `part1_mp` from the `Notebook` pane (top left).
-* Relate the contents of `data.offers` to the image above.
-
 ---
 
-> The graphical procedure doesn't generalize to transmission networks with limited transmission capacity.
+## (1b) Linear programming solution
 
-
----
-
-## Linear programming solution with CVXPY
-
-* Study the CVXPY formulation provided:
+* Study the [CVXPY](https://www.cvxpy.org/) formulation provided:
   1. Decision variables
   2. Constraints: bower balance, bounds
   3. Objective function
@@ -184,7 +170,7 @@ Simplifications:
 
 ---
 
-<!-- header: '3. Optimal power flow' -->
+<!-- header: '2. Optimal power flow' -->
 
 # Optimal power flow 
 
@@ -209,13 +195,13 @@ Simplifications:
 
 ---
 
-<!-- header: '4. Congestion' -->
+<!-- header: '3. Congestion' -->
 
 # Congestion 
 
 ---
 
-<!-- header: '5. Unit commitment' -->
+<!-- header: '4. Unit commitment' -->
 
 # Unit commitment 
 

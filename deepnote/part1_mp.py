@@ -43,7 +43,7 @@ load = data.buses.at[0, "load"]  # Python indexing starts at 0
 load # [MW]
 
 # %% [markdown]
-# Note the `fixed_cost` column: It is **not** used in our OPF formulation. We'll return to this later.
+# Note the `fixed_cost` column: It is **not** used in our formulation at this time.
 
 # %%
 data.generators
@@ -73,6 +73,9 @@ result = clear_offer_stack(data, load=load)
 plot_offer_stack(result.offers, load=load, marginal_price=result.marginal_price)
 plt.show(block=False)
 plt.savefig("images/offer-stack.png")
+
+# %% [markdown]
+# What technologies might you expect to be associated with Generators `A`, `B`, `C`, `D`, based on the relative magnitudes of their offers?
 
 # %% [markdown]
 # # Linear programming solution
@@ -106,7 +109,7 @@ dispatch = p.value  # [MW]
 marginal_price = -balance_constraint.dual_value  # [$/MWh] the -sign is convention-dependent
 
 # %% [markdown]
-# Verify that the results match our graphical solution:
+# Verify that the results match our graphical solution (repeated here for convenience):
 #
 # ![](images/offer-stack-v1.png)
 
@@ -117,49 +120,9 @@ marginal_price
 DataFrame({"offer": data.offers["id"].values, "dispatch": dispatch})
 
 # %%
-assert np.isclose(total_cost, sum(data.offers["price"].values * dispatch))
+assert np.isclose(total_cost, sum(data.offers["price"].values * dispatch))  # sanity check
 total_cost
 
 
 # %% [markdown]
 # We'll build on this LP solution when we tackle general networks (multiple buses and lines) and the Unit Commitment problem for longer planning horizons.
-
-# %% [markdown]
-# # _Marginal Costs are not Fixed!_
-#
-# Recall that the `fixed_cost` column of the `generators` table was **not** used in the calculations above.
-#
-# _What would happen if we did account for fixed costs in the OPF problem?_
-
-# %%
-def solve_fp(load: float):
-    """Total and cost and increment (with respect to 1MW load increment) for dispatch problem with fixed costs."""
-    global data
-    result = clear_offer_stack_fp(data, load=load)
-    perturbed = clear_offer_stack_fp(data, load=load + 1.0)
-    price_delta = perturbed.total_cost - result.total_cost
-    return result.total_cost, price_delta
-
-
-# %%
-loads = np.linspace(0, data.generators["capacity"].sum() - 1.0, 100)
-costs = [solve_fp(load) for load in loads]
-total_costs, marginal_costs = zip(*costs)
-
-# %% [markdown]
-# Skip the plotting commands below and discuss the output with your neighbour:
-# * How to cost increments relate to marginal costs and to the total cost?
-# * Can we explain the cost increments in light of the problem data (`generators` and `offers`)?
-
-# %%
-fig, ax_total = plt.subplots()
-ax_marginal = ax_total.twinx()
-ax_marginal.plot(loads, marginal_costs, label="marginal cost [$/MWh]", color="red")
-ax_marginal.set_ylabel("marginal cost [$/MWh]")
-ax_total.plot(loads, total_costs, label="cost [$/MWh]", color="blue")
-ax_total.set_xlabel("load [MW]")
-ax_total.set_ylabel("total cost [$/MWh]")
-ax_total.set_title("cost increments vs load")
-ax_total.grid(True)
-plt.show(block=False)
-plt.savefig("images/non-monotonic-prices.png")
