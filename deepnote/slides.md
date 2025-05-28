@@ -13,7 +13,7 @@ options:
     unicode: true
 style: |
   section {
-    font-size: 1.7em;
+    font-size: 1.6em;
   }
 ---
 
@@ -80,21 +80,80 @@ Work through notebook `part1_mp` to:
 
 ---
 
-### (Linearized/DC) OPF problem
 
-Run every 5 minutes to clear the Real-Time Energy Market:
+<!--
 
-| Category  | Description                      | Per       | Unit      | New?    |
+## Representing fixed costs
+
+* Study the generalize formulation to capture fixed costs:
+  - Extra binary on-off variable `x_on`
+  - Modulated capacity constraint
+  - Extra term in objective function
+* Evaluate the price increment associated a load increment at each load level
+
+---
+
+## Incompatibility of marginal prices and fixed costs
+
+<img src="images/non-monotonic-prices-v1.png" height="70%"/>
+-->
+
+---
+
+<!-- header: '2. Optimal power flow' -->
+
+# The Optimal Power Flow problem
+
+## Objective
+
+* Extend the LP formulation to account for transmission effects
+  - Extra variables: line flows [MW], bus voltage angles [rad]
+  - Extra constraint: Power flow on each line
+  - Same objective function
+
+---
+
+## OPF problem formulation
+
+<!-- | Category  | Description                      | Per       | Unit      | New?    |
 | --------- | -------------------------------- | --------- | --------- |-------- |
-| output    | dispatch instructions            | generator | MW        |         |
-| output    | locational marginal prices (LMP) | bus       | $/MWh     | per bus |
+| output    | dispatch instructions            | offer | MW        |         |
+| output    | marginal prices (LMP)            | bus       | $/MWh     | per bus |
 | input     | demands/loads                    | bus       | MW        | per bus |
 | input     | (quantity, price) pairs          | offer     | (MW, $/MWh) |       |
 | input     | (reactance, capacity) pairs      | line      | Ω, MW       | 🗸     |
 | input     | line-bus connectivity            | -         | -           | 🗸     |
 
+--- 
+-->
+
+| Name | Per   | Description         | Lower | Upper |
+|-----|--------|---------------------|-------|-------|
+| `p` | offers | dispatched power [MW] | 0 | offer quantity |
+| `f` | lines  | line flow [MW]     | -(line capacity) | line capacity |
+| `θ` | buses  | bus voltage angle [rad]    | $-\pi$ | $+\pi$ |
+
+Power balance constraints:
+$$
+    \sum_{o \in \text{Offers @ $b$}} 
+    \texttt{p}[o] 
+    + \sum_{\ell \in \text{Lines in $b$}} \texttt{f}[\ell] 
+    - \sum_{\ell \in \text{Lines out $b$}} \texttt{f}[\ell] 
+    = \text{load @ b}
+    \quad \forall b \in \text{Buses}
+$$
+Power flow constraints:
+$$
+\texttt{f}_{ij}
+    = (\texttt{$θ$}_j - \texttt{$θ$}_i) (\texttt{base\_power} / \texttt{reactance}_{ij})
+    \forall (i,j) \in \text{Lines}
+$$
+One fixed voltage angle: $\theta_0 = 0$
 
 ---
+
+
+<!-- ---
 
 $$
 \begin{aligned}
@@ -110,20 +169,26 @@ p_b = {}& \sum_{c} f_{bc} \quad \text{(power balance at bus $b$)}
 \\
 \theta_0 = {}& 0 \quad \text{angle at reference bus}
 \end{aligned}
+$$ -->
+
+## OPF problem formulation (cont.)
+
+Objective:
 $$
-Associated marginal price at bus $b$:
+\text{total cost} = \min_{\texttt{p}, \texttt{f}, \theta}~ \sum_{o \in \text{Offers}} (\text{offer price})_o \, \texttt{p}_o
 $$
-\begin{aligned}
+
+Marginal price at bus $b$:
+$$
 \text{LMP}_b~[\$/\text{MWh}] = \frac{\partial~\text{total cost [\$/h]}}{\partial~\text{load}_b~[\text{MW}]}
-\end{aligned}
-$$
+$$ 
+
 
 ---
 
 ### AC optimal power flow (OPF) problem
 
-The linearized OPF is an idealization of the much harder AC problem:
-
+The linearized OPF is an idealization of the AC problem:
 $$
 \begin{aligned}
 \min_{S^{\text{gen}} \in \mathbb{C}^{M+N}, ~ v \in \mathbb{C}^M} ~ {}& \sum_a c_a(S_a^{\text{gen}})
@@ -142,56 +207,13 @@ v_0 = {}& 1 + 0i \quad \text{voltage at reference bus}
 \end{aligned}
 $$
 
----
-
-Simplifications:
 | Symbol            | Linearized OPF | AC OPF analog                 | Assumption                              | Unit     |
 | ----------------- | -------------- | ----------------------------- | --------------------------------------- | -------- |
-| bus injection     | $p_a$          | $\operatorname{real}(S_{a}^{\text{gen}})$  | $\operatorname{imag}(S_{a}^{\text{gen}}) \approx 0$  | MW       |
-| line flow         | $f_{bc}$       | $\operatorname{real}(S_{bc})$ | $\operatorname{imag}(S_{bc}) \approx 0$ | MW       |
-| bus voltage angle | $\theta_a$     | $\operatorname{angle}(v_a)$   | $\operatorname{abs}(v_a) \approx 1$     | rad      |
+| bus injection     | $\texttt{p}_b$          | $\operatorname{real}(S_{a}^{\text{gen}})$  | $\operatorname{imag}(S_{a}^{\text{gen}}) \approx 0$  | MW       |
+| line flow         | $\texttt{f}_{bc}$       | $\operatorname{real}(S_{bc})$ | $\operatorname{imag}(S_{bc}) \approx 0$ | MW       |
+| bus voltage angle | $\theta_b$     | $\operatorname{angle}(v_a)$   | $\operatorname{abs}(v_a) \approx 1$     | rad      |
 | line reactance    | $x_{bc}$       | $\operatorname{imag}(z_{bc})$ | $\operatorname{real}(z_{bc}) \approx 0$ | $\Omega$ |
 
----
-
-## Representing fixed costs
-
-* Study the generalize formulation to capture fixed costs:
-  - Extra binary on-off variable `x_on`
-  - Modulated capacity constraint
-  - Extra term in objective function
-* Evaluate the price increment associated a load increment at each load level
-
----
-
-## Incompatibility of marginal prices and fixed costs
-
-<img src="images/non-monotonic-prices-v1.png" height="70%"/>
-
----
-
-<!-- header: '2. Optimal power flow' -->
-
-# Optimal power flow 
-
-## Objective
-
-* Extend the LP formulation to account for transmission effects
-  - Extra variables: 
-  - Extra constraint: Power flow on each line
-  - Same objective function!
-
----
-
-
-| Category | Description                      | Per       | Unit      | New? |
-| -------- | -------------------------------- | --------- | --------- | ---  |
-| output   | dispatch instructions            | generator | MW        |      |
-| output   | locational marginal prices (LMP) | bus       | $/MWh     | (per bus) |
-| input    | demand/load                      | bus       | MW        | (per bus) |
-| input    | supply quantity, price           | offer     | MW, $/MWh |   | 
-| input    | reactance, capacity              | line      | Ω, MW     | 🗸 |
-| input    | line-bus topology                | -         | -         | 🗸 |
 
 ---
 
