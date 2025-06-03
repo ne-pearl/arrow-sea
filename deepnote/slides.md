@@ -60,7 +60,7 @@ Work through notebook `part1_mp` to:
 
 ## (1a) Graphical approach to marginal pricing
 
-1. Stack quantity-price offers pairs, ordered by price
+1. Stack quantity-price offer pairs, ordered by price
 2. Dispatch quantities to left of load
 3. Intercept of load and offer price sets marginal price
 
@@ -74,29 +74,15 @@ Work through notebook `part1_mp` to:
 
 * Study the [CVXPY](https://www.cvxpy.org/) formulation provided:
   1. Decision variables
-  2. Constraints: bower balance, bounds
+  2. Constraints: power balance, bounds
   3. Objective function
 * Verify that we reproduce the graphical solution
 
 ---
 
+## Context: Locational Marginal Prices
 
-<!--
-
-## Representing fixed costs
-
-* Study the generalize formulation to capture fixed costs:
-  - Extra binary on-off variable `x_on`
-  - Modulated capacity constraint
-  - Extra term in objective function
-* Evaluate the price increment associated a load increment at each load level
-
----
-
-## Incompatibility of marginal prices and fixed costs
-
-<img src="images/non-monotonic-prices-v1.png" height="70%"/>
--->
+<img src="images/iso-ne-real-time.png" height="70%"/>
 
 ---
 
@@ -106,6 +92,7 @@ Work through notebook `part1_mp` to:
 
 ## Objective
 
+Work through Notebook `part2_opf`:
 * Extend the LP formulation to account for transmission effects
   - Extra variables: line flows [MW], bus voltage angles [rad]
   - Extra constraint: Power flow on each line
@@ -114,18 +101,6 @@ Work through notebook `part1_mp` to:
 ---
 
 ## OPF problem formulation
-
-<!-- | Category  | Description                      | Per       | Unit      | New?    |
-| --------- | -------------------------------- | --------- | --------- |-------- |
-| output    | dispatch instructions            | offer | MW        |         |
-| output    | marginal prices (LMP)            | bus       | $/MWh     | per bus |
-| input     | demands/loads                    | bus       | MW        | per bus |
-| input     | (quantity, price) pairs          | offer     | (MW, $/MWh) |       |
-| input     | (reactance, capacity) pairs      | line      | Ω, MW       | 🗸     |
-| input     | line-bus connectivity            | -         | -           | 🗸     |
-
---- 
--->
 
 | Name | Per   | Description         | Lower | Upper |
 |-----|--------|---------------------|-------|-------|
@@ -136,46 +111,26 @@ Work through notebook `part1_mp` to:
 Power balance constraints:
 $$
     \sum_{o \in \text{Offers @ $b$}} 
-    \texttt{p}[o] 
-    + \sum_{\ell \in \text{Lines in $b$}} \texttt{f}[\ell] 
-    - \sum_{\ell \in \text{Lines out $b$}} \texttt{f}[\ell] 
-    = \text{load @ b}
-    \quad \forall b \in \text{Buses}
+    \texttt{p}_o
+    + \sum_{\ell \in \text{Lines in $b$}} \texttt{f}_\ell
+    - \sum_{\ell \in \text{Lines out $b$}} \texttt{f}_\ell
+    = \text{load}_b
+    \quad \text{for each}~ b \in \text{Buses}
 $$
 Power flow constraints:
 $$
-\texttt{f}_{ij}
-    = (\texttt{$θ$}_j - \texttt{$θ$}_i) (\texttt{base\_power} / \texttt{reactance}_{ij})
-    \forall (i,j) \in \text{Lines}
+\texttt{f}_{ij} = (\texttt{$θ$}_i - \texttt{$θ$}_j) / \texttt{reactance}_{ij}
+   \quad \text{for each}~ (i,j) \in \text{Lines}
 $$
 One fixed voltage angle: $\theta_0 = 0$
 
 ---
 
-
-<!-- ---
-
-$$
-\begin{aligned}
-\text{total cost} = \min_{p, ~ f, ~ \theta} ~ {}& \sum_o c_o p_o \quad\text{sum over offers/buses}
-\\
-f_{bc} = {}& (\theta_a - \theta_b) / x_{bc} \quad \text{(power flow on line $bc$)}
-\\
-p_b = {}& \sum_{c} f_{bc} \quad \text{(power balance at bus $b$)}
-\\
-\vert f_{bc}\vert \leq {}& \bar{f}_{bc} \quad \text{(line capacity)}
-\\
-0 \leq p_a \leq {}& \bar{p}_b \quad \text{(injection bounds)}
-\\
-\theta_0 = {}& 0 \quad \text{angle at reference bus}
-\end{aligned}
-$$ -->
-
 ## OPF problem formulation (cont.)
 
 Objective:
 $$
-\text{total cost} = \min_{\texttt{p}, \texttt{f}, \theta}~ \sum_{o \in \text{Offers}} (\text{offer price})_o \, \texttt{p}_o
+\text{total cost} = \min_{\texttt{p}, \texttt{f}, \theta}~ \sum_{o \in \text{Offers}} (\text{offer price})_o \times \texttt{p}_o
 $$
 
 Marginal price at bus $b$:
@@ -207,6 +162,8 @@ v_0 = {}& 1 + 0i \quad \text{voltage at reference bus}
 \end{aligned}
 $$
 
+---
+
 | Symbol            | Linearized OPF | AC OPF analog                 | Assumption                              | Unit     |
 | ----------------- | -------------- | ----------------------------- | --------------------------------------- | -------- |
 | bus injection     | $\texttt{p}_b$          | $\operatorname{real}(S_{a}^{\text{gen}})$  | $\operatorname{imag}(S_{a}^{\text{gen}}) \approx 0$  | MW       |
@@ -221,13 +178,23 @@ $$
 
 # Congestion 
 
+# Objective
+
+Use the small 3-bus networks in Notebook `part3_congestion` to revisit two important observations:
+1. Congestion causes LMP separation;
+2. LMP separation is a price signal;
+
+
+
 ---
 
 <!-- header: '4. Unit commitment' -->
 
-# Unit commitment 
+# The Unit Commitment problem
 
-OPF does not explicitly account for generator **dynamics**:
+## Context
+
+OPF does not explicitly account for generator dynamics and fixed costs:
 
 * Physical constraints:
   - on ramping
@@ -238,41 +205,52 @@ OPF does not explicitly account for generator **dynamics**:
 
 These are captured in **Unit Commitment** formulations run in the day-ahead market:
 
+---
+
+## Review: OPF Formulation
+
+| Name | Per   | Description         | Lower | Upper |
+|-----|--------|---------------------|-------|-------|
+| `p` | offers | dispatched power [MW] | 0 | offer quantity |
+| `f` | lines  | line flow [MW]     | -(line capacity) | line capacity |
+| `θ` | buses  | bus voltage angle [rad]    | $-\pi$ | $+\pi$ |
+
+Constraints
+* Power balance at each bus
+* Power flow on each line
+* Fixed voltage angle at reference bus
 
 ---
 
-## UC vs OPF: Problem size
+## Unit commitment (UC) formulation
 
-|     | OPF | UC  | 
-|-----|-----|-----|
-| Planning horizon | next 5 mins | next 24 hours |
-| Data | demand forecast | demand forecasts  (per period) | 
-| Variables | continuous | continuous & binary |
+### Data
 
-> UC is a much larger problem!
+* OPF data +
+* Load forcast for **each** bus, **each** period
 
----
+### Decision variables
 
-## UC vs OPF: Additional UC binary variables
+* OPF variables for **each** planning period
+* Extra **binary** variables for each generator and **each** period
 
-| Description | Name | Costs | Constraints |  |
-|-------------|------|-------|-------------|----|
-| commitment variable | `x_on` | "no-load" |    | 
+| Description | Name | Costs | Constraints |
+|-------------|------|-------|-------------|
+| commitment variable | `x_on` | fixed |  (logical)  | 
 | start-up variable | `x_su` | start-up | minimum up-time  |
 | shut-down variable | `x_sd` | shut-down | minimum down-time |
 
 ---
 
-## Fixed vs variable costs
+### Objective function
 
 | Cost | Dependence | Unit |
 |---|---|---|
 | energy | output | $/MWh |
 | operating ("no-load") | on/off | $/h |
-| start-up | transition | $ |
-| shut-down | transition | $ |
+| start-up, shut-down | transition | $ |
 
-Total cost to be minimized over planning horizon:
+Objective: Total cost to be minimized over planning horizon
 $$
 \begin{aligned}
   \sum_t \left(
@@ -287,16 +265,23 @@ $$
 
 ---
 
-## Dynamic constraints
+## Unit commitment (UC) formulation (cont.)
 
-For generator $g$ at time $t$:
+Constraints: 
+
+* OPF-style constraints at **each period**:
+  - Power balance at each bus
+  - Power flow on each line
+  - Fixed voltage angle at reference bus
+
+* Dynamic constraints: for each generator $g$ at time $t$
 $$
 \begin{aligned}
   \vert p_{g, t} - p_{g, t - 1} \vert \leq {}& \texttt{max\_ramp}_g
   \\
-  \texttt{x\_on}_{g, t + \tau} \geq {}& \texttt{x\_su}_{g, t} \quad \forall \tau \in [0, \texttt{min\_uptime}_g]
+  \texttt{x\_on}_{g, t + \tau} \geq {}& \texttt{x\_su}_{g, t} \quad \text{for each}~ \tau \in [0, \texttt{min\_uptime}_g]
   \\
-  \texttt{x\_on}_{g, t + \tau} \leq {}& 1 - \texttt{x\_sd}_{g, t} \quad \forall \tau \in [0, \texttt{min\_downtime}_g]
+  \texttt{x\_on}_{g, t + \tau} \leq {}& 1 - \texttt{x\_sd}_{g, t} \quad \text{for each}~ \tau \in [0, \texttt{min\_downtime}_g]
 \end{aligned}
 $$
 
@@ -304,43 +289,45 @@ $$
 
 <!-- header: 'Review quiz' -->
 
-## Review questions
+# Review questions
 
-### Marginal prices
+## Marginal prices
 
 1. Identify products with near-zero marginal price?
 2. What is a (locational) marginal energy price (LMP)?
 3. Why might LMPs vary across a network?
 4. Why do LMPs vary over time?
+5. How are LMPs used to settle energy transactions?
+6. (How are they settled in New England?)
 5. Which operating costs are not captured by marginal pricing?
 6. How are these additional costs covered in practice?
 
-### Optimal power flow
+---
 
-1. What are the decision variables of the OPF problem? How are they used?
-2. What are the constraints? How do they associate with network elements?
+## Optimal power flow
+
+1. What are the decision variables of the OPF problem?
+2. What are the constraints?
 3. What is the objective function?
 4. What are the key assumptions in the linearized OPF model?
-5. Are we always able to solve the DC-OPF?
+5. Are we always able to solve the linearized OPF?
 6. Why not solve the AC-OPF instead?
-7. How does power flow relate to bus voltage angles?
 8. Why is it necessary to prescribe the voltage angle at one bus?
 
-### Network economics
-
-1. Do the LMP have economic significance at a bus with zero load? With zero generation capacity?
-2. How can load payments exceed generation payments if energy losses are neglected?
+---
 
 ### Unit commitment
 
-1. Which variable in the commitment problem do not appear in the pricing problem?
-2. Which constraints in the commitment problem do not appear in the pricing problem?
-3. Why are energy prices not determined from the commitment problem?
-4. Which of a generator's operating costs are not captured by the pricing problem?
+Contrast the following elements of the UC and OPF problems:
+1. Decision variables
+2. Constraints
+3. Objective function
+3. Why do fixed costs difficult to reconcile with marginal prices?
 
-### Implementations
+## Network economics
 
-1. Why are LMPs not universally adopted?
+1. Do the LMP have economic significance at a bus with zero load? With zero generation capacity?
+2. How can load payments exceed generation payments if energy losses are neglected?
 
 ---
 
@@ -350,16 +337,17 @@ $$
 
 * [Fu & Li (2006) _Different Models and properties on LMP calculations_](https://doi.org/10.1109/PES.2006.1709536)
   - A description of LMP formulations, including the pricing of congestion and losses
+* [Krishnamurthy, Li, & Tesfatsion (2016) _An 8-Zone Test System Based on ISO New England Data: Development and Application_](https://doi.org/10.1109/TPWRS.2015.2399171)
+  - Description of the ISO-NE 8-bus model
 * [Li & Bo (2010) _Small Test Systems for Power System Economic Studies_](https://doi.org/10.1109/PES.2010.5589973)
   - A description of the PJM 5-bus model
-
-<!-- heade'r: '
+* [Gribik, Hogan, & Pope (2007) _Market-Clearing Electricity Prices and Energy Uplift_](https://hepg.hks.harvard.edu/publications/market-clearing-electricity-prices-and-energy-uplift)
+  - Explains the difficulty of compensating for fixed costs
+ 
+<!-- header: 
 * [CVXPY documentation](https://www.cvxpy.org/)
 * [Deepnote documentation](https://deepnote.com/docs/)
 * [Jupyter documentation](https://docs.jupyter.org/en/latest/)
 -->
 
-<!-- header: 'Thank You' -->
-
-
-_Thanks for your participation!_
+_Thanks for your time and participation!_
