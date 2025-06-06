@@ -1,0 +1,4 @@
+id,bus_id,capacity,fuel_type,min_uptime,min_downtime,ramp_rate,startup_cost,noload_cost,dispatch_cost_coef_a,dispatch_cost_coef_b
+A,Bus1,100.0,GT,24,0,0,0.0,0.0,10.0,0.0002
+B,Bus1,100.0,GT,24,0,0,6000.0,0.0,10.0,0.0002299999999999
+C,Bus1,100.0,GT,24,0,0,8000.0,0.0,5.0,0.00015
